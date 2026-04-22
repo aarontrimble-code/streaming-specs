@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Streaming Platform Audio Specs — 2026 Reference</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0b;
+    --surface: #111113;
+    --surface2: #18181c;
+    --border: #2a2a32;
+    --border-lit: #38383f;
+    --text: #e8e8f0;
+    --muted: #9898b0;
+    --accent: #00e5a0;
+    --accent2: #7b61ff;
+    --warn: #ff6b35;
+    --gold: #f5c842;
+    --mono: 'Space Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Scanline texture overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.04) 2px,
+      rgba(0,0,0,0.04) 4px
+    );
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  /* ---- HEADER ---- */
+  header {
+    padding: 3rem 2rem 2rem;
+    max-width: 1100px;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .eyebrow::before {
+    content: '';
+    display: inline-block;
+    width: 24px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  h1 {
+    font-family: var(--mono);
+    font-size: clamp(1.6rem, 4vw, 2.6rem);
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    margin-bottom: 1rem;
+    color: var(--text);
+  }
+
+  h1 span {
+    color: var(--accent);
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 0.95rem;
+    max-width: 560px;
+    margin-bottom: 0.5rem;
+  }
+
+  .updated {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    margin-top: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .updated .dot {
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  /* ---- NAV TABS ---- */
+  .tab-nav {
+    max-width: 1100px;
+    margin: 2rem auto 0;
+    padding: 0 2rem;
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .tab-nav::-webkit-scrollbar { display: none; }
+
+  .tab-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0.85rem 1.25rem;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    white-space: nowrap;
+    transition: color 0.2s, border-color 0.2s;
+  }
+
+  .tab-btn:hover { color: var(--text); }
+
+  .tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  /* ---- MAIN LAYOUT ---- */
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem 2rem 4rem;
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; animation: fadeIn 0.25s ease; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ---- SECTION HEADERS ---- */
+  .section-label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1rem;
+    margin-top: 2.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ---- PLATFORM CARDS ---- */
+  .platform-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+  }
+
+  .platform-card {
+    background: var(--surface);
+    padding: 1.5rem;
+    transition: background 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .platform-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--card-accent, var(--border));
+    transition: opacity 0.2s;
+  }
+
+  .platform-card:hover {
+    background: var(--surface2);
+  }
+
+  .platform-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+  }
+
+  .platform-name {
+    font-family: var(--mono);
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--text);
+  }
+
+  .platform-badge {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid currentColor;
+    border-radius: 2px;
+    opacity: 0.8;
+  }
+
+  .badge-atmos { color: var(--accent2); }
+  .badge-hires { color: var(--gold); }
+  .badge-lossy { color: var(--muted); }
+
+  .spec-rows { display: flex; flex-direction: column; gap: 0.6rem; }
+
+  .spec-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+  }
+
+  .spec-label {
+    font-family: var(--mono);
+    font-size: 0.67rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+
+  .spec-value {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--text);
+    text-align: right;
+  }
+
+  .spec-value.highlight { color: var(--accent); }
+  .spec-value.warn { color: var(--warn); }
+  .spec-value.gold { color: var(--gold); }
+
+  .spec-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 0.5rem 0;
+  }
+
+  /* ---- ATMOS SECTION ---- */
+  .atmos-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+    margin-bottom: 1px;
+  }
+
+  .atmos-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .atmos-icon {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, var(--accent2), #4a3aff);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: white;
+    flex-shrink: 0;
+  }
+
+  .atmos-name {
+    font-family: var(--mono);
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+
+  .atmos-sub {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 0.15rem;
+  }
+
+  .atmos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+  }
+
+  /* ---- LOUDNESS TABLE ---- */
+  .loudness-table-wrap {
+    border: 1px solid var(--border);
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+  }
+
+  thead tr {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border-lit);
+  }
+
+  th {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-size: 0.62rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+
+  td {
+    padding: 0.75rem 1rem;
+    color: var(--text);
+    white-space: nowrap;
+  }
+
+  td:first-child {
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .td-accent { color: var(--accent); }
+  .td-warn { color: var(--warn); }
+  .td-gold { color: var(--gold); }
+  .td-muted { color: var(--muted); }
+  .td-purple { color: var(--accent2); }
+
+  /* ---- CALLOUT BLOCKS ---- */
+  .callout {
+    border-left: 2px solid var(--accent);
+    padding: 1rem 1.25rem;
+    background: rgba(0, 229, 160, 0.04);
+    margin: 1.5rem 0;
+    font-size: 0.88rem;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  .callout strong { color: var(--text); }
+
+  .callout.warn {
+    border-color: var(--warn);
+    background: rgba(255, 107, 53, 0.04);
+  }
+
+  .callout.gold {
+    border-color: var(--gold);
+    background: rgba(245, 200, 66, 0.04);
+  }
+
+  /* ---- FOOTER ---- */
+  footer {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: gap;
+    gap: 1rem;
+  }
+
+  .footer-note {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    line-height: 1.8;
+  }
+
+  .footer-cta {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--accent);
+    text-decoration: none;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: 1px solid var(--accent);
+    padding: 0.5rem 1rem;
+    transition: background 0.2s, color 0.2s;
+  }
+
+  .footer-cta:hover {
+    background: var(--accent);
+    color: var(--bg);
+  }
+
+  /* ---- MOBILE ---- */
+  @media (max-width: 640px) {
+    header { padding: 2rem 1.25rem 1.5rem; }
+    main { padding: 1.5rem 1.25rem 3rem; }
+    .tab-nav { padding: 0 1.25rem; }
+    .tab-btn { padding: 0.75rem 0.9rem; font-size: 0.66rem; }
+    .platform-grid { grid-template-columns: 1fr; }
+    .atmos-grid { grid-template-columns: 1fr; }
+    footer { padding: 1.5rem 1.25rem; flex-direction: column; align-items: flex-start; }
+  }
+</style>
+<script src="https://f.convertkit.com/ckjs/ck.5.js"></script>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">Audio Engineer Reference</div>
+  <h1>Streaming Platform<br><span>Audio Specs</span></h1>
+  <p class="subtitle">Loudness targets, codec requirements, true peak limits, and spatial audio support — all in one place. Updated regularly.</p>
+  <div class="updated">
+    <span class="dot"></span>
+    Last verified: March 2026
+  </div>
+</header>
+
+<nav class="tab-nav">
+  <button class="tab-btn active" data-tab="loudness">Loudness Targets</button>
+  <button class="tab-btn" data-tab="codecs">Formats & Codecs</button>
+  <button class="tab-btn" data-tab="spatial">Spatial Audio</button>
+  <button class="tab-btn" data-tab="podcast">Podcast & Dialog</button>
+</nav>
+
+<main>
+
+  <!-- ============ TAB: LOUDNESS ============ -->
+  <div class="tab-panel active" id="tab-loudness">
+
+    <div class="callout">
+      <strong>How normalization works:</strong> Platforms measure your track's integrated loudness (LUFS) and apply gain to match their target. If your master is louder than the target, it gets turned <em>down</em> — no processing, just attenuation. If it's quieter, some platforms will boost it. Over-compressing to hit a specific number hurts your dynamics without any benefit.
+    </div>
+
+    <div class="section-label">Music Streaming</div>
+    <div class="loudness-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Platform</th>
+            <th>Target (Integrated)</th>
+            <th>True Peak Max</th>
+            <th>Normalization</th>
+            <th>User Selectable?</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Spotify</td>
+            <td class="td-accent">−14 LUFS</td>
+            <td>−1 dBTP</td>
+            <td class="td-accent">On by default</td>
+            <td>Yes (Quiet/Normal/Loud)</td>
+          </tr>
+          <tr>
+            <td>Apple Music</td>
+            <td class="td-accent">−16 LUFS</td>
+            <td>−1 dBTP</td>
+            <td class="td-accent">On by default</td>
+            <td>Yes (can disable)</td>
+          </tr>
+          <tr>
+            <td>YouTube / YT Music</td>
+            <td class="td-accent">−14 LUFS</td>
+            <td>−1 dBTP</td>
+            <td class="td-accent">On by default</td>
+            <td>No</td>
+          </tr>
+          <tr>
+            <td>Amazon Music</td>
+            <td class="td-accent">−14 LUFS</td>
+            <td>−2 dBTP</td>
+            <td class="td-accent">On by default</td>
+            <td>No</td>
+          </tr>
+          <tr>
+            <td>Tidal</td>
+            <td class="td-accent">−14 LUFS</td>
+            <td>−1 dBTP</td>
+            <td class="td-accent">On by default</td>
+            <td>Yes</td>
+          </tr>
+          <tr>
+            <td>SoundCloud</td>
+            <td class="td-muted">~−14 LUFS</td>
+            <td>−1 dBTP</td>
+            <td class="td-muted">Unconfirmed</td>
+            <td>No</td>
+          </tr>
+          <tr>
+            <td>Deezer</td>
+            <td class="td-accent">−15 LUFS</td>
+            <td>−1 dBTP</td>
+            <td class="td-accent">On by default</td>
+            <td>Yes</td>
+          </tr>
+          <tr>
+            <td>Pandora</td>
+            <td class="td-accent">−14 LUFS</td>
+            <td>−1 dBTP</td>
+            <td class="td-accent">On</td>
+            <td>No</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout warn">
+      <strong>Spotify's three modes:</strong> Quiet = −19 LUFS, Normal = −14 LUFS (default, ~87% of users), Loud = −11 LUFS. Master to sound great at Normal. If your master is louder than the selected target, Spotify applies clean gain reduction — no limiting or processing.
+    </div>
+
+    <div class="section-label">Broadcast & Film</div>
+    <div class="loudness-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Standard / Platform</th>
+            <th>Target (Integrated)</th>
+            <th>True Peak Max</th>
+            <th>Standard</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>EBU R128 (EU Broadcast)</td>
+            <td class="td-accent">−23 LUFS</td>
+            <td>−1 dBTP</td>
+            <td>EBU R128</td>
+            <td>±1 LU tolerance</td>
+          </tr>
+          <tr>
+            <td>ATSC A/85 (US Broadcast)</td>
+            <td class="td-accent">−24 LKFS</td>
+            <td>−2 dBTP</td>
+            <td>ITU-R BS.1770</td>
+            <td>US TV standard</td>
+          </tr>
+          <tr>
+            <td>Netflix</td>
+            <td class="td-accent">−27 LUFS</td>
+            <td>−2 dBTP</td>
+            <td>EBU R128</td>
+            <td>Dialog-gated measurement</td>
+          </tr>
+          <tr>
+            <td>Apple TV+</td>
+            <td class="td-accent">−27 LUFS</td>
+            <td>−2 dBTP</td>
+            <td>EBU R128</td>
+            <td>Similar to Netflix</td>
+          </tr>
+          <tr>
+            <td>Disney+ / Hulu</td>
+            <td class="td-accent">−24 LUFS</td>
+            <td>−2 dBTP</td>
+            <td>ATSC A/85</td>
+            <td>Dialog-gated</td>
+          </tr>
+          <tr>
+            <td>YouTube (video)</td>
+            <td class="td-accent">−14 LUFS</td>
+            <td>−1 dBTP</td>
+            <td>Custom</td>
+            <td>Same as music</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- ============ TAB: CODECS ============ -->
+  <div class="tab-panel" id="tab-codecs">
+
+    <div class="callout">
+      <strong>Why codecs matter at mastering:</strong> Lossy encoding (AAC, Ogg Vorbis, MP3) can introduce inter-sample peaks above 0 dBFS even when your master is within limits. True peak limiting to −1 dBTP or lower prevents distortion introduced during transcoding.
+    </div>
+
+    <div class="section-label">Playback Codecs by Platform</div>
+    <div class="platform-grid">
+
+      <div class="platform-card" style="--card-accent: #1db954;">
+        <div class="platform-header">
+          <div class="platform-name">Spotify</div>
+          <span class="platform-badge badge-lossy">Lossy</span>
+        </div>
+        <div class="spec-rows">
+          <div class="spec-row">
+            <span class="spec-label">Format</span>
+            <span class="spec-value">Ogg Vorbis</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">Bitrate</span>
+            <span class="spec-value">96 / 160 / 320 kbps</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">Upload Format</span>
+            <span class="spec-value highlight">WAV or FLAC</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">Sample Rate</span>
+            <span class="spec-value">44.1 kHz</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">Bit Depth</span>
+            <span class="spec-value">16-bit (delivery)</span>
+          </div>
+          <div class="spec-divider"></div>
+          <div class="spec-row">
+            <span class="spec-label">True Peak</span>
+            <span class="spec-value warn">−1 dBTP max</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">Hi-Res</span>
+            <span class="spec-value">No</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="platform-card" style="--card-accent: #fc3c44;">
+        <div class="platform-header">
+          <div class="platform-name">Apple Music</div>
+          <span class="platform-badge badge-atmos">Atmos</span>
+        </div>
+        <div class="spec-rows">
+          <div class="spec-row">
+            <span class="spec-label">Format</span>
+            <span class="spec-value">AAC 256 kbps</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">Lossless</span>
+            <span class="spec-value gold">ALAC up to 24/192</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">Upload Format</span>
+            <span class="spec-value highlight">WAV or FLAC</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">Sample Rate</span>
+            <span class="spec-value">44.1 kHz / 48 kHz</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">Bit Depth</span>
+            <span class="spec-value">24-bit accepted</span>
+          </div>
+          <div class="spec-divider"></div>
+          <div class="spec-row">
+            <span class="spec-label">True Peak</span>
+            <span class="spec-value warn">−1 dBTP max</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">Hi-Res / Atmos</span>
+            <span class="spec-value gold">Yes / Yes</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="platform-card" style="--card-accent: #ff0000;">
+        <div class="platform-header">
+          <div class="platform-name">YouTube</div>
+          <span class="platform-badge badge-lossy">Lossy</span>
+        </div>
+        <div class="spec-rows">
+          <div class="spec-row">
+            <span class="spec-label">Format</span>
+            <span class="spec-value">Opus / AAC</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">Bitrate</span>
+            <span class="spec-value">128–256 kbps</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">Upload Format</span>
+            <span class="spec-value highlight">Any common format</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">Sample Rate</span>
+            <span class="spec-value">44.1 / 48 kHz</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">Bit Depth</span>
+            <span class="spec-value">24-bit accepted</span>
+          </div>
+          <div class="spec-divider"></div>
+          <div class="spec-row">
+            <span class="spec-label">True Peak</span>
+            <span class="spec-value warn">−1 dBTP rec.</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">Hi-Res</span>
+            <span class="spec-value">No</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="platform-card" style="--card-accent: #00a8e1;">
+        <div class="platform-header">
+          <div class="platform-name">Amazon Music</div>
+          <span class="platform-badge badge-hires">Hi-Res</span>
+        </div>
+        <div class="spec-rows">
+          <div class="spec-row">
+            <span class="spec-label">Standard</span>
+            <span class="spec-value">MP3 320 kbps</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">HD</span>
+            <span class="spec-value gold">FLAC 16/44.1</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">Ultra HD</span>
+            <span class="spec-value gold">FLAC up to 24/192</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">Upload Format</span>
+            <span class="spec-value highlight">WAV or FLAC</span>
+          </div>
+          <div class="spec-divider"></div>
+          <div class="spec-row">
+            <span class="spec-label">True Peak</span>
+            <span class="spec-value warn">−2 dBTP max</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">Hi-Res / Atmos</span>
+            <span class="spec-value gold">Yes / Yes</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="platform-card" style="--card-accent: #00ffff;">
+        <div class="platform-header">
+          <div class="platform-name">Tidal</div>
+          <span class="platform-badge badge-hires">Hi-Res</span>
+        </div>
+        <div class="spec-rows">
+          <div class="spec-row">
+            <span class="spec-label">Standard</span>
+            <span class="spec-value">AAC 320 kbps</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">HiFi</span>
+            <span class="spec-value gold">FLAC 16/44.1</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">Master</span>
+            <span class="spec-value gold">MQA / Hi-Res FLAC</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">Upload Format</span>
+            <span class="spec-value highlight">WAV or FLAC</span>
+          </div>
+          <div class="spec-divider"></div>
+          <div class="spec-row">
+            <span class="spec-label">True Peak</span>
+            <span class="spec-value warn">−1 dBTP max</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">Hi-Res / Atmos</span>
+            <span class="spec-value gold">Yes / Yes</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="platform-card" style="--card-accent: #ff5500;">
+        <div class="platform-header">
+          <div class="platform-name">SoundCloud</div>
+          <span class="platform-badge badge-lossy">Lossy</span>
+        </div>
+        <div class="spec-rows">
+          <div class="spec-row">
+            <span class="spec-label">Format (Free)</span>
+            <span class="spec-value">Opus 64 kbps</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">Format (Go+)</span>
+            <span class="spec-value">AAC 256 kbps</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">Upload Format</span>
+            <span class="spec-value highlight">WAV, FLAC, AIFF</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">Max File Size</span>
+            <span class="spec-value">4 GB</span>
+          </div>
+          <div class="spec-divider"></div>
+          <div class="spec-row">
+            <span class="spec-label">True Peak</span>
+            <span class="spec-value warn">−1 dBTP rec.</span>
+          </div>
+          <div class="spec-row">
+            <span class="spec-label">Note</span>
+            <span class="spec-value td-warn">Aggressive encoding</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="callout gold">
+      <strong>Delivery rule of thumb:</strong> Always deliver a 24-bit WAV or FLAC at the sample rate of your session (44.1 or 48 kHz). Distributors will transcode to whatever the platform needs. Upsampling before delivery adds no quality benefit and may cause issues.
+    </div>
+
+  </div>
+
+  <!-- ============ TAB: SPATIAL ============ -->
+  <div class="tab-panel" id="tab-spatial">
+
+    <div class="callout">
+      <strong>Dolby Atmos delivery standard:</strong> All platforms receiving Atmos mixes require <strong>48 kHz / 24-bit</strong>. Using 44.1 kHz or 16-bit will fail QC. Your stereo and spatial file durations must match within 50ms.
+    </div>
+
+    <div class="section-label">Spatial Audio Support by Platform</div>
+    <div class="loudness-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Platform</th>
+            <th>Dolby Atmos</th>
+            <th>Delivery Format</th>
+            <th>Sample Rate</th>
+            <th>Loudness Target</th>
+            <th>Tier Required</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Apple Music</td>
+            <td class="td-purple">✓ Yes</td>
+            <td>ADM BWF WAV</td>
+            <td class="td-gold">48 kHz / 24-bit</td>
+            <td class="td-accent">−16 LUFS</td>
+            <td>All tiers ($10.99/mo)</td>
+          </tr>
+          <tr>
+            <td>Amazon Music</td>
+            <td class="td-purple">✓ Yes</td>
+            <td>ADM BWF WAV</td>
+            <td class="td-gold">48 kHz / 24-bit</td>
+            <td class="td-accent">−14 LUFS</td>
+            <td>Unlimited ($9.99/mo)</td>
+          </tr>
+          <tr>
+            <td>Tidal</td>
+            <td class="td-purple">✓ Yes</td>
+            <td>ADM BWF WAV</td>
+            <td class="td-gold">48 kHz / 24-bit</td>
+            <td class="td-accent">−14 LUFS</td>
+            <td>All tiers ($11/mo)</td>
+          </tr>
+          <tr>
+            <td>Deezer</td>
+            <td class="td-purple">✓ Yes</td>
+            <td>ADM BWF WAV</td>
+            <td class="td-gold">48 kHz / 24-bit</td>
+            <td class="td-accent">−15 LUFS</td>
+            <td>HiFi ($19.99/mo)</td>
+          </tr>
+          <tr>
+            <td>Spotify</td>
+            <td class="td-muted">✗ No</td>
+            <td>—</td>
+            <td class="td-muted">—</td>
+            <td class="td-accent">−14 LUFS (stereo)</td>
+            <td>N/A</td>
+          </tr>
+          <tr>
+            <td>YouTube Music</td>
+            <td class="td-muted">✗ No</td>
+            <td>—</td>
+            <td class="td-muted">—</td>
+            <td class="td-accent">−14 LUFS (stereo)</td>
+            <td>N/A</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section-label">Atmos Delivery Checklist</div>
+    <div class="platform-grid">
+      <div class="platform-card" style="--card-accent: var(--accent2);">
+        <div class="platform-name" style="margin-bottom:1rem;">Session Setup</div>
+        <div class="spec-rows">
+          <div class="spec-row"><span class="spec-label">Sample Rate</span><span class="spec-value highlight">48 kHz (mandatory)</span></div>
+          <div class="spec-row"><span class="spec-label">Bit Depth</span><span class="spec-value highlight">24-bit (mandatory)</span></div>
+          <div class="spec-row"><span class="spec-label">Bed Format</span><span class="spec-value">7.1.4 main bed</span></div>
+          <div class="spec-row"><span class="spec-label">Objects</span><span class="spec-value">Up to 118 objects</span></div>
+          <div class="spec-row"><span class="spec-label">Frame Rate</span><span class="spec-value">Match project session</span></div>
+        </div>
+      </div>
+      <div class="platform-card" style="--card-accent: var(--accent2);">
+        <div class="platform-name" style="margin-bottom:1rem;">Delivery File</div>
+        <div class="spec-rows">
+          <div class="spec-row"><span class="spec-label">Format</span><span class="spec-value highlight">ADM BWF WAV</span></div>
+          <div class="spec-row"><span class="spec-label">Stereo Match</span><span class="spec-value">Within 50ms duration</span></div>
+          <div class="spec-row"><span class="spec-label">True Peak</span><span class="spec-value warn">−1 dBTP max</span></div>
+          <div class="spec-row"><span class="spec-label">Binaural Render</span><span class="spec-value">Required for QC</span></div>
+          <div class="spec-row"><span class="spec-label">Compatible DAWs</span><span class="spec-value">PT, Logic, Nuendo, Live</span></div>
+        </div>
+      </div>
+      <div class="platform-card" style="--card-accent: var(--accent2);">
+        <div class="platform-name" style="margin-bottom:1rem;">Common QC Failures</div>
+        <div class="spec-rows">
+          <div class="spec-row"><span class="spec-label">Wrong sample rate</span><span class="spec-value warn">44.1 kHz = fail</span></div>
+          <div class="spec-row"><span class="spec-label">16-bit depth</span><span class="spec-value warn">Rejected</span></div>
+          <div class="spec-row"><span class="spec-label">Duration mismatch</span><span class="spec-value warn">&gt;50ms = fail</span></div>
+          <div class="spec-row"><span class="spec-label">True peak over</span><span class="spec-value warn">Clipping on encode</span></div>
+          <div class="spec-row"><span class="spec-label">No binaural</span><span class="spec-value warn">May fail QC</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout warn">
+      <strong>Note on 96 kHz Atmos:</strong> While 96 kHz offers additional sonic detail and is sometimes requested for audiophile or archival releases, it doubles file size and delivery load. All streaming platforms currently require 48 kHz for distribution. Use 96 kHz only if specifically requested by a client or label for archival masters.
+    </div>
+
+  </div>
+
+  <!-- ============ TAB: PODCAST ============ -->
+  <div class="tab-panel" id="tab-podcast">
+
+    <div class="callout">
+      <strong>Podcast & dialog content</strong> uses different loudness standards than music. The AES and most podcast platforms target <strong>−16 LUFS ±1 LU</strong> for spoken word, following the same broadcast lineage as EBU R128.
+    </div>
+
+    <div class="section-label">Podcast Platforms</div>
+    <div class="loudness-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Platform</th>
+            <th>Target (Integrated)</th>
+            <th>True Peak Max</th>
+            <th>Preferred Format</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Apple Podcasts</td>
+            <td class="td-accent">−16 LUFS</td>
+            <td>−1 dBTP</td>
+            <td>MP3 / AAC</td>
+            <td>No normalization applied</td>
+          </tr>
+          <tr>
+            <td>Spotify (Podcast)</td>
+            <td class="td-accent">−14 LUFS</td>
+            <td>−1 dBTP</td>
+            <td>MP3 / AAC</td>
+            <td>Same engine as music</td>
+          </tr>
+          <tr>
+            <td>Google Podcasts</td>
+            <td class="td-accent">−16 LUFS</td>
+            <td>−1 dBTP</td>
+            <td>MP3</td>
+            <td>Industry standard</td>
+          </tr>
+          <tr>
+            <td>Overcast</td>
+            <td class="td-muted">No target</td>
+            <td>—</td>
+            <td>MP3</td>
+            <td>Volume boost feature (user)</td>
+          </tr>
+          <tr>
+            <td>General RSS / Self-hosted</td>
+            <td class="td-accent">−16 LUFS</td>
+            <td>−1 dBTP</td>
+            <td>MP3 128–192 kbps</td>
+            <td>AES recommended standard</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section-label">Broadcast Standards Quick Reference</div>
+    <div class="loudness-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Standard</th>
+            <th>Region</th>
+            <th>Target</th>
+            <th>True Peak</th>
+            <th>LRA Max</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>EBU R128</td>
+            <td>Europe</td>
+            <td class="td-accent">−23 LUFS ±1</td>
+            <td>−1 dBTP</td>
+            <td>20 LU</td>
+          </tr>
+          <tr>
+            <td>ATSC A/85</td>
+            <td>USA</td>
+            <td class="td-accent">−24 LKFS ±2</td>
+            <td>−2 dBTP</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td>ARIB TR-B32</td>
+            <td>Japan</td>
+            <td class="td-accent">−24 LUFS ±2</td>
+            <td>−1 dBTP</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td>OP-59</td>
+            <td>Australia</td>
+            <td class="td-accent">−24 LUFS ±2</td>
+            <td>−1 dBTP</td>
+            <td>—</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout gold">
+      <strong>Pro tip for podcast delivery:</strong> Export at −16 LUFS with −1 dBTP true peak as a 44.1 kHz / 16-bit MP3 at 128 kbps (mono) or 192 kbps (stereo). This hits the AES standard, works across all major platforms, and keeps file sizes podcast-friendly.
+    </div>
+
+  </div>
+
+</main>
+
+<footer>
+  <div class="footer-note">
+    Data sourced from platform documentation, AES technical documents, and verified testing.<br>
+    Specs change — always verify with your distributor before delivery. Last checked March 2026.
+  </div>
+  <a href="#" class="footer-cta" data-formkit-toggle="6a9a304f48">Get Notified of Updates →</a>
+</footer>
+
+<script>
+  const tabs = document.querySelectorAll('.tab-btn');
+  const panels = document.querySelectorAll('.tab-panel');
+
+  tabs.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.tab;
+      tabs.forEach(t => t.classList.remove('active'));
+      panels.forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + target).classList.add('active');
+    });
+  });
+</script>
+
+<form action="https://app.kit.com/forms/9358456/subscriptions" class="seva-form formkit-form" method="post" data-sv-form="9358456" data-uid="6a9a304f48" data-format="modal" data-version="5" data-options="{&quot;settings&quot;:{&quot;after_subscribe&quot;:{&quot;action&quot;:&quot;message&quot;,&quot;success_message&quot;:&quot;Success! Now check your email to confirm your subscription.&quot;,&quot;redirect_url&quot;:&quot;&quot;},&quot;analytics&quot;:{&quot;google&quot;:null,&quot;fathom&quot;:null,&quot;facebook&quot;:null,&quot;segment&quot;:null,&quot;pinterest&quot;:null,&quot;sparkloop&quot;:null,&quot;googletagmanager&quot;:null},&quot;modal&quot;:{&quot;trigger&quot;:&quot;scroll_percentage&quot;,&quot;scroll_percentage&quot;:100,&quot;timer&quot;:null,&quot;devices&quot;:&quot;all&quot;,&quot;show_once_every&quot;:15},&quot;powered_by&quot;:{&quot;show&quot;:true,&quot;url&quot;:&quot;https://kit.com/features/forms?utm_campaign=poweredby&amp;utm_content=form&amp;utm_medium=referral&amp;utm_source=dynamic&quot;},&quot;recaptcha&quot;:{&quot;enabled&quot;:false},&quot;return_visitor&quot;:{&quot;action&quot;:&quot;show&quot;,&quot;custom_content&quot;:&quot;&quot;},&quot;slide_in&quot;:{&quot;display_in&quot;:&quot;bottom_right&quot;,&quot;trigger&quot;:&quot;timer&quot;,&quot;scroll_percentage&quot;:null,&quot;timer&quot;:5,&quot;devices&quot;:&quot;all&quot;,&quot;show_once_every&quot;:15},&quot;sticky_bar&quot;:{&quot;display_in&quot;:&quot;top&quot;,&quot;trigger&quot;:&quot;timer&quot;,&quot;scroll_percentage&quot;:null,&quot;timer&quot;:5,&quot;devices&quot;:&quot;all&quot;,&quot;show_once_every&quot;:15}},&quot;version&quot;:&quot;5&quot;}" min-width="400 500 600 700 800" style="background-color: rgb(255, 255, 255); border-radius: 6px;"><div data-style="full"><div data-element="column" class="formkit-column" style="background-color: rgb(249, 250, 251);"><div class="formkit-background" style="opacity: 0.3;"></div><div class="formkit-header" data-element="header" style="color: rgb(77, 77, 77); font-size: 20px; font-weight: 700;"><h2>Join the Newsletter</h2></div><div class="formkit-subheader" data-element="subheader" style="color: rgb(104, 104, 104); font-size: 15px;">Subscribe to get our latest content by email.</div><div class="formkit-image formkit-image relative focus:outline-none" role="button" tabindex="0"><img class="cursor-pointer focus:outline-blue" src="https://embed.filekitcdn.com/e/frWzo7bXS8iQD98NKMK4fJ/9nJFWwujN6XjUHMTTZdHnJ" style="max-width: 100%;"></div></div><div data-element="column" class="formkit-column"><ul class="formkit-alert formkit-alert-error" data-element="errors" data-group="alert"></ul><div data-element="fields" class="seva-fields formkit-fields"><div class="formkit-field"><input class="formkit-input" name="email_address" aria-label="Email Address" placeholder="Email Address" required="" type="email" style="color: rgb(0, 0, 0); border-color: rgb(227, 227, 227); border-radius: 4px; font-weight: 400;"></div><button data-element="submit" class="formkit-submit formkit-submit" style="color: rgb(255, 255, 255); background-color: rgb(22, 119, 190); border-radius: 24px; font-weight: 700;"><div class="formkit-spinner"><div></div><div></div><div></div></div><span>Subscribe</span></button></div><div class="formkit-guarantee" data-element="guarantee" style="color: rgb(77, 77, 77); font-size: 13px; font-weight: 400;">We respect your privacy. Unsubscribe at any time.</div><div class="formkit-powered-by-convertkit-container"><a href="https://kit.com/features/forms?utm_campaign=poweredby&utm_content=form&utm_medium=referral&utm_source=dynamic" data-element="powered-by" class="formkit-powered-by-convertkit" data-variant="dark" target="_blank" rel="nofollow">Built with Kit</a></div></div></div></form>
+
+</body>
+</html>
